@@ -33,7 +33,7 @@
 # Author: Ioan Sucan
 
 from geometry_msgs.msg import Pose, PoseStamped
-from moveit_msgs.msg import RobotTrajectory, Grasp, Constraints
+from moveit_msgs.msg import RobotTrajectory, Grasp, PlaceLocation, Constraints
 from sensor_msgs.msg import JointState
 import rospy
 import tf
@@ -376,6 +376,10 @@ class MoveGroupCommander(object):
         """ Specify which planner to use when motion planning """
         self._g.set_planner_id(planner_id)
 
+    def set_num_planning_attempts(self, num_planning_attempts):
+        """ Set the number of times the motion plan is to be computed from scratch before the shortest solution is returned. The default value is 1. """
+        self._g.set_num_planning_attempts(num_planning_attempts)
+
     def set_workspace(self, ws):
         """ Set the workspace for the robot as either [], [minX, minY, maxX, maxY] or [minX, minY, minZ, maxX, maxY, maxZ] """
         if len(ws) == 0:
@@ -435,9 +439,12 @@ class MoveGroupCommander(object):
         path.deserialize(ser_path)
         return (path, fraction)
 
-    def execute(self, plan_msg):
+    def execute(self, plan_msg, wait = True):
         """Execute a previously planned path"""
-        return self._g.execute(conversions.msg_to_string(plan_msg))
+        if wait:
+            return self._g.execute(conversions.msg_to_string(plan_msg))
+        else:
+            return self._g.async_execute(conversions.msg_to_string(plan_msg))
 
     def attach_object(self, object_name, link_name = "", touch_links = []):
         """ Given the name of an object existing in the planning scene, attach it to a link. The link used is specified by the second argument. If left unspecified, the end-effector link is used, if one is known. If there is no end-effector link, the first link in the group is used. If no link is identified, failure is reported. True is returned if an attach request was succesfully sent to the move_group node. This does not verify that the attach request also was successfuly applied by move_group."""
@@ -454,16 +461,22 @@ class MoveGroupCommander(object):
         else:
             return self._g.pick(object_name, [conversions.msg_to_string(x) for x in grasp])
 
-    def place(self, object_name, pose):
-        """Place the named object at a particular location in the environment"""
+    def place(self, object_name, location=None):
+        """Place the named object at a particular location in the environment or somewhere safe in the world if location is not provided"""
         result = False
-        if type(pose) is PoseStamped:
+        if location is None:
+            result = self._g.place(object_name)
+        elif type(location) is PoseStamped:
             old = self.get_pose_reference_frame()
-            self.set_pose_reference_frame(pose.header.frame_id)
-            result = self._g.place(object_name, conversions.pose_to_list(pose.pose))
+            self.set_pose_reference_frame(location.header.frame_id)
+            result = self._g.place(object_name, conversions.pose_to_list(location.pose))
             self.set_pose_reference_frame(old)
+        elif type(location) is Pose:
+            result = self._g.place(object_name, conversions.pose_to_list(location))
+        elif type(location) is PlaceLocation:
+            result = self._g.place(object_name, conversions.msg_to_string(location))
         else:
-            result = self._g.place(object_name, conversions.pose_to_list(pose))
+            raise MoveItCommanderException("Parameter location must be a Pose, PoseStamped or PlaceLocation object")
         return result
 
     def set_support_surface_name(self, value):
