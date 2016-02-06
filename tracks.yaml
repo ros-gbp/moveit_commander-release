@@ -47,13 +47,15 @@ tracks:
     - git-bloom-generate -y rosrelease :{ros_distro} --source upstream -i :{release_inc}
     - git-bloom-generate -y rosdebian --prefix release/:{ros_distro} :{ros_distro}
       -i :{release_inc}
-    devel_branch: hydro-devel
+    - git-bloom-generate -y rosrpm --prefix release/:{ros_distro} :{ros_distro} -i
+      :{release_inc}
+    devel_branch: indigo-devel
     last_version: 0.5.7
-    name: upstream_indigo
+    name: moveit_commander
     patches: null
     release_inc: '1'
     release_repo_url: null
-    release_tag: :{version}
+    release_tag: 0.6.0
     ros_distro: indigo
     vcs_type: git
     vcs_uri: https://github.com/ros-planning/moveit_commander.git
