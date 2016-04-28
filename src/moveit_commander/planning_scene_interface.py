@@ -37,7 +37,12 @@ from moveit_msgs.msg import CollisionObject, AttachedCollisionObject
 from geometry_msgs.msg import PoseStamped, Point
 from shape_msgs.msg import SolidPrimitive, Plane, Mesh, MeshTriangle
 from exception import MoveItCommanderException
-from pyassimp import pyassimp
+
+try:
+    from pyassimp import pyassimp
+except:
+    # support pyassimp > 3.0
+    import pyassimp
 
 # This is going to have more functionality; (feel free to add some!)
 # This class will include simple Python code for publishing messages for a planning scene
@@ -46,8 +51,8 @@ class PlanningSceneInterface(object):
     """ Simple interface to making updates to a planning scene """
 
     def __init__(self):
-        self._pub_co = rospy.Publisher('/collision_object', CollisionObject)
-        self._pub_aco = rospy.Publisher('/attached_collision_object', AttachedCollisionObject)
+        self._pub_co = rospy.Publisher('/collision_object', CollisionObject, queue_size=1)
+        self._pub_aco = rospy.Publisher('/attached_collision_object', AttachedCollisionObject, queue_size=1)
 
     def __make_sphere(self, name, pose, radius):
         co = CollisionObject()
